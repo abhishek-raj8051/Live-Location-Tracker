@@ -303,6 +303,11 @@
             </div>
 
             <div class="telemetry-row">
+                <span class="tel-label">Tracking Mode</span>
+                <span class="tel-value" id="tel-method" style="color: var(--accent-secondary); font-weight: 600;">GPS (High Accuracy)</span>
+            </div>
+
+            <div class="telemetry-row">
                 <span class="tel-label">Resolved Address</span>
                 <span class="tel-value" id="tel-address" style="white-space: normal; line-height: 1.4; font-size: 13px;">Resolving address...</span>
             </div>
@@ -350,6 +355,7 @@
         const telLat = document.querySelector("#tel-lat");
         const telLng = document.querySelector("#tel-lng");
         const telAddress = document.querySelector("#tel-address");
+        const telMethod = document.querySelector("#tel-method");
         const gmapsLink = document.querySelector("#gmaps-link");
 
         const id = new URLSearchParams(location.search).get("id");
@@ -357,12 +363,16 @@
 
         // Load starting coordinates templated by tarkine
         let latLng = [25.1743, 75.9193]; // Default fallback (Kota, India)
+        let startingMethod = "GPS (High Accuracy)";
         try {
             const rawData = `{{ data }}`;
             if (rawData && rawData.trim() !== "") {
                 const parsed = JSON.parse(rawData);
-                if (Array.isArray(parsed) && parsed.length === 2) {
+                if (Array.isArray(parsed) && parsed.length >= 2) {
                     latLng = [Number(parsed[0]), Number(parsed[1])];
+                    if (parsed[2]) {
+                        startingMethod = parsed[2];
+                    }
                 }
             }
         } catch (e) {
@@ -373,9 +383,10 @@
         
         telLat.innerHTML = startLat.toFixed(5);
         telLng.innerHTML = startLng.toFixed(5);
+        telMethod.innerHTML = startingMethod;
 
         // Set GMaps href and resolve address
-        gmapsLink.href = `https://maps.google.com/maps?q=${startLat},${startLng}&t=k`;
+        gmapsLink.href = `https://www.google.com/maps/search/?api=1&query=${startLat},${startLng}`;
         resolveAddress(startLat, startLng);
 
         // Initialize Leaflet Map
@@ -386,10 +397,10 @@
         // Set zoom controls positioning to bottom-right
         map.zoomControl.setPosition('bottomright');
 
-        // Add High-Resolution Satellite Imagery Tile Layer (Esri World Imagery)
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 19,
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        // Add Google Hybrid (Satellite + Road Labels) Tile Layer
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            attribution: 'Map data &copy; Google'
         }).addTo(map);
 
         // Create Custom Dark Icon
@@ -427,7 +438,7 @@
         marker.bindPopup(`
             <div class="popup-title">TELEMETRY PROBE</div>
             <div class="popup-id" style="margin-bottom: 8px;">${id}</div>
-            <a href="https://maps.google.com/maps?q=${startLat},${startLng}&t=k" target="_blank" style="
+            <a href="https://www.google.com/maps/search/?api=1&query=${startLat},${startLng}" target="_blank" style="
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
@@ -465,7 +476,22 @@
             .then(res => res.json())
             .then(data => {
                 if (data && data.display_name) {
-                    telAddress.innerHTML = data.display_name;
+                    // Try to find the most specific place name (like shop, building, amenity, etc.)
+                    let specificPlace = "";
+                    const addr = data.address || {};
+                    const keys = ['amenity', 'shop', 'building', 'office', 'tourism', 'house_name', 'house_number', 'road', 'neighbourhood'];
+                    for (const key of keys) {
+                        if (addr[key]) {
+                            specificPlace = addr[key];
+                            break;
+                        }
+                    }
+                    
+                    if (specificPlace && specificPlace !== addr.road && specificPlace !== addr.house_number) {
+                        telAddress.innerHTML = `<strong>${specificPlace}</strong><br>${data.display_name}`;
+                    } else {
+                        telAddress.innerHTML = data.display_name;
+                    }
                 } else {
                     telAddress.innerHTML = "Address details not registered";
                 }
@@ -488,9 +514,10 @@
                 const lngNum = Number(data.lng);
                 telLat.innerHTML = latNum.toFixed(5);
                 telLng.innerHTML = lngNum.toFixed(5);
+                telMethod.innerHTML = data.method || "GPS (High Accuracy)";
 
                 // Update GMaps link and lookup address
-                gmapsLink.href = `https://maps.google.com/maps?q=${latNum},${lngNum}&t=k`;
+                gmapsLink.href = `https://www.google.com/maps/search/?api=1&query=${latNum},${lngNum}`;
                 resolveAddress(latNum, lngNum);
 
                 // Update Map Viewport & Marker
@@ -498,7 +525,7 @@
                 marker.setPopupContent(`
                     <div class="popup-title">TELEMETRY PROBE</div>
                     <div class="popup-id" style="margin-bottom: 8px;">${id}</div>
-                    <a href="https://maps.google.com/maps?q=${latNum},${lngNum}&t=k" target="_blank" style="
+                    <a href="https://www.google.com/maps/search/?api=1&query=${latNum},${lngNum}" target="_blank" style="
                         display: inline-flex;
                         align-items: center;
                         gap: 6px;
