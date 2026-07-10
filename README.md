@@ -88,7 +88,7 @@ Live-Location-Tracker/
 
 ## 🔐 Secure Login Console
 
-<img src="image1.png" width="900"/>
+<img src="./screenshots/image1.png" width="350">
 
 Modern authentication interface with a premium cyber-inspired design.
 
@@ -96,7 +96,8 @@ Modern authentication interface with a premium cyber-inspired design.
 
 ## 🖥️ Admin Control Panel
 
-<img src="image2.png" width="900"/>
+<img src="./screenshots/image2.png" width="900">
+
 
 Real-time monitoring dashboard with telemetry control, live console feed, weather link generation, and tracked device management.
 
@@ -104,7 +105,7 @@ Real-time monitoring dashboard with telemetry control, live console feed, weathe
 
 ## 📡 Weather Synchronization
 
-<img src="image3.png" width="900"/>
+<img src="./screenshots/image3.png" width="500">
 
 Radar calibration interface for synchronizing weather telemetry and atmospheric data.
 
@@ -112,7 +113,7 @@ Radar calibration interface for synchronizing weather telemetry and atmospheric 
 
 ## 🌦️ Weather Dashboard
 
-<img src="image4.png" width="450"/>
+<img src="./screenshots/image4.png" width="350">
 
 # ⚙️ Installation
 
