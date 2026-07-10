@@ -148,6 +148,19 @@ Open your browser
 http://localhost:3000
 ```
 
+
+# 🔑 Demo Login Credentials
+
+Use the following demo credentials to access the application:
+
+| Field | Value |
+|-------|-------|
+| Username | `abhishek` |
+| Password | `abhishek` |
+
+> **Note:** These credentials are provided only for demonstration and educational purposes.
+
+
 ---
 
 # 🎓 Educational Purpose
