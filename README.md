@@ -84,31 +84,35 @@ Live-Location-Tracker/
 
 ---
 
-# 📷 Screenshots
+# 📸 Application Preview
 
-## 🔐 Login Page
+## 🔐 Secure Login Console
 
-> Add Screenshot Here
+<img src="screenshots/login.png" width="900"/>
 
----
-
-## 🏠 Home Page
-
-> Add Screenshot Here
+Modern authentication interface with a premium cyber-inspired design.
 
 ---
 
-## 📍 Live Map
+## 🖥️ Admin Control Panel
 
-> Add Screenshot Here
+<img src="screenshots/dashboard.png" width="900"/>
+
+Real-time monitoring dashboard with telemetry control, live console feed, weather link generation, and tracked device management.
+
+---
+
+## 📡 Weather Synchronization
+
+<img src="screenshots/radar.png" width="900"/>
+
+Radar calibration interface for synchronizing weather telemetry and atmospheric data.
 
 ---
 
-## 🌦️ Weather Page
+## 🌦️ Weather Dashboard
 
-> Add Screenshot Here
-
----
+<img src="screenshots/weather.png" width="450"/>
 
 # ⚙️ Installation
 
